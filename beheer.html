@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>📖 Beheer Kleuterboeken</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+
+  <!-- Export libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <h1>📖 Overzicht Kleuterboeken</h1>
+  
+  <div id="filters">
+    <input type="text" id="zoekveld" placeholder="Zoek op titel of auteur...">
+    <select id="klasFilter"></select>
+    <button id="exportBtn">📥 Export CSV</button>
+    <button id="exportXlsxBtn">📊 Export Excel</button>
+    <button id="exportPdfBtn">🖨️ Export PDF per klas</button>
+  </div>
+
+  <table id="boekenTabel">
+    <thead>
+      <tr>
+        <th>ISBN</th>
+        <th>Titel</th>
+        <th>Auteur</th>
+        <th>Klas</th>
+        <th>Status</th>
+        <th>Cover</th>
+        <th>Laatst gewijzigd</th>
+      </tr>
+    </thead>
+    <tbody id="boekenBody">
+      <tr><td colspan="7">📚 Boeken worden geladen...</td></tr>
+    </tbody>
+  </table>
+
+  <script src="beheer.js"></script>
+</body>
+</html>

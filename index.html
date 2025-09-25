@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>📚 Inventaris Kleuterboeken</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+
+  <!-- QuaggaJS voor ISBN scanning -->
+  <script src="https://unpkg.com/quagga/dist/quagga.min.js"></script>
+</head>
+<body>
+  <h1>📚 Boeken toevoegen</h1>
+
+  <div id="loginDiv">
+    <button id="loginBtn">Inloggen met Google</button>
+    <button id="logoutBtn" style="display:none;">Uitloggen</button>
+  </div>
+
+  <section id="scanner" style="display:none;">
+    <video id="camera"></video>
+    <button id="scanBtn">📷 Scan ISBN</button>
+  </section>
+
+  <section id="boek">
+    <h2>Boekgegevens</h2>
+    <div id="boekinfo">Nog geen boek gescand.</div>
+    <button id="saveBtn" style="display:none;">💾 Opslaan in database</button>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
