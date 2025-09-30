@@ -22,6 +22,8 @@ const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const boekenTabel = document.getElementById("boekenTabel");
 const klasFilter = document.getElementById("klasFilter");
+const zoekInput = document.getElementById("zoekInput");
+
 
 let alleBoeken = [];
 
@@ -63,9 +65,15 @@ async function laadBoeken() {
 function toonBoeken() {
   boekenTabel.innerHTML = "";
   const filter = klasFilter.value;
+  const zoekterm = zoekInput.value.toLowerCase();
 
   alleBoeken
     .filter(b => filter === "alle" || b.klas === filter)
+    .filter(b =>
+      (b.titel || "").toLowerCase().includes(zoekterm) ||
+      (b.auteur || "").toLowerCase().includes(zoekterm) ||
+      (b.isbn || "").toLowerCase().includes(zoekterm)
+    )
     .forEach(b => {
       boekenTabel.innerHTML += `
         <tr>
@@ -90,6 +98,8 @@ window.verwijderBoek = async function(id) {
 };
 
 klasFilter.addEventListener("change", toonBoeken);
+
+zoekInput.addEventListener("input", toonBoeken);
 
 // ===== EXPORT CSV =====
 document.getElementById("exportCsvBtn").addEventListener("click", () => {
@@ -134,3 +144,4 @@ document.getElementById("exportPdfBtn").addEventListener("click", () => {
   win.document.close();
   win.print();
 });
+
