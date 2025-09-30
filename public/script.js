@@ -1,9 +1,20 @@
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// ============================
+// Firebase setup
+// ============================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD6MVGAjfWWzw5LfiykYAA0Dyc9AgFPt5U",
   authDomain: "inventaris-kleuterboeken-bsow.firebaseapp.com",
@@ -13,95 +24,121 @@ const firebaseConfig = {
   appId: "1:892488979059:web:27de8ca6923aa0cc315006"
 };
 
+// Init Firebase
 const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
-const db = getFirestore(app);
 
-// Login-knop
+// ============================
+// UI elementen
+// ============================
 const loginBtn = document.getElementById("loginBtn");
-const boekgegevensDiv = document.getElementById("boekgegevens");
+const logoutBtn = document.getElementById("logoutBtn");
+const boekInfoDiv = document.getElementById("boekinfo");
+const saveBtn = document.getElementById("saveBtn");
 
+let huidigBoek = null; // tijdelijk boek object
+
+// ============================
+// Login / logout
+// ============================
 loginBtn.addEventListener("click", async () => {
-  if (auth.currentUser) {
-    await signOut(auth);
-  } else {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      alert("Login mislukt");
-    }
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    alert("Inloggen mislukt: " + err.message);
   }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await signOut(auth);
 });
 
 onAuthStateChanged(auth, (user) => {
-  if (user && user.email.endsWith("@bsow.be")) {
-    loginBtn.textContent = `Uitloggen (${user.displayName})`;
-    boekgegevensDiv.textContent = `Welkom ${user.displayName}, je kunt nu boeken toevoegen.`;
+  if (user) {
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "block";
   } else {
-    loginBtn.textContent = "Inloggen met Google";
-    boekgegevensDiv.textContent = "Nog geen boek gescand.";
+    loginBtn.style.display = "block";
+    logoutBtn.style.display = "none";
   }
 });
 
-// Formulier opslaan
-const boekForm = document.getElementById("boekForm");
-const melding = document.getElementById("melding");
+// ============================
+// ISBN scannen → info ophalen
+// ============================
+async function fetchBookInfo(isbn) {
+  try {
+    // OpenLibrary API
+    const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&jscmd=details&format=json`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const details = data[`ISBN:${isbn}`]?.details;
 
-boekForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!auth.currentUser || !auth.currentUser.email.endsWith("@bsow.be")) {
-    alert("Je hebt geen rechten om boeken toe te voegen");
+    if (!details) {
+      boekInfoDiv.innerHTML = `<p>Geen gegevens gevonden voor ISBN ${isbn}</p>`;
+      huidigBoek = null;
+      saveBtn.style.display = "none";
+      return;
+    }
+
+    huidigBoek = {
+      isbn: isbn,
+      titel: details.title || "Onbekende titel",
+      auteur: details.authors ? details.authors.map(a => a.name).join(", ") : "Onbekend",
+      categorie: details.subjects ? details.subjects.join(", ") : "Onbekend",
+      doelgroep: details.audience || "Onbekend",
+      cover: details.covers ? `https://covers.openlibrary.org/b/id/${details.covers[0]}-M.jpg` : null,
+      toegevoegdDoor: auth.currentUser?.displayName || "Onbekend",
+      klas: ""
+    };
+
+    // Toon in UI
+    boekInfoDiv.innerHTML = `
+      <p><b>ISBN:</b> ${huidigBoek.isbn}</p>
+      <p><b>Titel:</b> ${huidigBoek.titel}</p>
+      <p><b>Auteur(s):</b> ${huidigBoek.auteur}</p>
+      <p><b>Categorieën:</b> ${huidigBoek.categorie}</p>
+      <p><b>Doelgroep:</b> ${huidigBoek.doelgroep}</p>
+      ${huidigBoek.cover ? `<img src="${huidigBoek.cover}" alt="cover" style="max-height:200px;">` : ""}
+    `;
+
+    saveBtn.style.display = "block";
+  } catch (err) {
+    console.error(err);
+    boekInfoDiv.innerHTML = `<p>Fout bij ophalen boekgegevens</p>`;
+  }
+}
+
+// ============================
+// Boek opslaan in Firestore
+// ============================
+saveBtn.addEventListener("click", async () => {
+  if (!huidigBoek) {
+    alert("Geen boek om op te slaan!");
     return;
   }
 
-  const isbn = document.getElementById("isbn").value.trim();
-  const titel = document.getElementById("titel").value.trim();
-  const auteur = document.getElementById("auteur").value.trim();
-  const klas = document.getElementById("klas").value.trim() || null;
-  const categorie = document.getElementById("categorie").value.trim() || null;
-  const doelgroep = document.getElementById("doelgroep").value.trim() || null;
-  const cover = document.getElementById("cover").value.trim() || null;
-
   try {
     await addDoc(collection(db, "boeken"), {
-      isbn, titel, auteur, klas, categorie, doelgroep, cover,
-      toegevoegdDoor: auth.currentUser.displayName,
+      ...huidigBoek,
       tijd: new Date()
     });
-    melding.textContent = `✅ Boek "${titel}" opgeslagen!`;
-    boekForm.reset();
-    document.getElementById("coverPreview").style.display = "none";
+    alert("✅ Boek opgeslagen!");
+    saveBtn.style.display = "none";
+    boekInfoDiv.innerHTML = "Nog geen boek gescand.";
+    huidigBoek = null;
   } catch (err) {
-    console.error(err);
-    melding.textContent = "❌ Opslaan mislukt.";
+    alert("❌ Opslaan mislukt: " + err.message);
   }
 });
 
-// ISBN → auto aanvullen
-const isbnInput = document.getElementById("isbn");
-isbnInput.addEventListener("blur", async () => {
-  const isbn = isbnInput.value.trim();
-  if (!isbn) return;
-
-  try {
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-    const data = await res.json();
-
-    if (data.totalItems > 0) {
-      const boek = data.items[0].volumeInfo;
-      document.getElementById("titel").value = boek.title || "";
-      document.getElementById("auteur").value = boek.authors ? boek.authors.join(", ") : "";
-      document.getElementById("categorie").value = boek.categories ? boek.categories.join(", ") : "";
-      document.getElementById("doelgroep").value = boek.maturityRating === "NOT_MATURE" ? "Kinderen / Jeugd" : "Volwassenen";
-      if (boek.imageLinks && boek.imageLinks.thumbnail) {
-        document.getElementById("cover").value = boek.imageLinks.thumbnail;
-        const img = document.getElementById("coverPreview");
-        img.src = boek.imageLinks.thumbnail;
-        img.style.display = "block";
-      }
-    }
-  } catch (err) {
-    console.error("ISBN lookup fout:", err);
-  }
-});
+// ============================
+// Demo scanner (mock)
+// ============================
+// Hier kan je je echte QuaggaJS scanner aanroepen.
+// Voor test: gewoon manueel ISBN meegeven:
+window.scanISBN = (isbn) => {
+  fetchBookInfo(isbn);
+};
