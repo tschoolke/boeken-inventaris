@@ -124,3 +124,60 @@ window.verwijderBoek = async function(id) {
 
 // 🔹 Filter
 klasFilter.addEventListener("change", toonBoeken);
+
+// 🔹 Exporteer naar CSV
+document.getElementById("exportCsvBtn").addEventListener("click", () => {
+  let csv = "ISBN,Titel,Auteur,Klas,Toegevoegd door\n";
+  alleBoeken.forEach((b) => {
+    csv += `"${b.isbn || ""}","${b.titel || ""}","${b.auteur || ""}","${b.klas || ""}","${b.toegevoegdDoor || ""}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "boeken.csv");
+  link.click();
+});
+
+// 🔹 Exporteer naar PDF
+document.getElementById("exportPdfBtn").addEventListener("click", () => {
+  const printWindow = window.open("", "_blank");
+  let html = `
+    <html>
+      <head>
+        <title>Boekenlijst</title>
+        <style>
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #000; padding: 4px; font-size: 12px; }
+          th { background: #f0f0f0; }
+        </style>
+      </head>
+      <body>
+        <h2>Boekenlijst</h2>
+        <table>
+          <tr>
+            <th>ISBN</th>
+            <th>Titel</th>
+            <th>Auteur</th>
+            <th>Klas</th>
+            <th>Toegevoegd door</th>
+          </tr>
+          ${alleBoeken.map(b => `
+            <tr>
+              <td>${b.isbn || ""}</td>
+              <td>${b.titel || ""}</td>
+              <td>${b.auteur || ""}</td>
+              <td>${b.klas || ""}</td>
+              <td>${b.toegevoegdDoor || ""}</td>
+            </tr>
+          `).join("")}
+        </table>
+      </body>
+    </html>
+  `;
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.print();
+});
