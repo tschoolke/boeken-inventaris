@@ -1,6 +1,12 @@
 // Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  deleteDoc, 
+  doc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // 🔹 Firebase configuratie
 const firebaseConfig = {
@@ -19,17 +25,19 @@ const db = getFirestore(app);
 const boekenTabel = document.getElementById("boekenTabel");
 const klasFilter = document.getElementById("klasFilter");
 
+let alleBoeken = []; // hier houden we alle boeken bij met hun id
+
 // 🔹 Boeken ophalen uit Firestore
 async function laadBoeken() {
   boekenTabel.innerHTML = "";
   const querySnapshot = await getDocs(collection(db, "boeken"));
 
   let klassenSet = new Set();
-  let boeken = [];
+  alleBoeken = [];
 
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    boeken.push(data);
+  querySnapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    alleBoeken.push({ id: docSnap.id, ...data }); // id meenemen voor wissen
     if (data.klas) klassenSet.add(data.klas);
   });
 
@@ -39,15 +47,15 @@ async function laadBoeken() {
     klasFilter.innerHTML += `<option value="${klas}">${klas}</option>`;
   });
 
-  toonBoeken(boeken);
+  toonBoeken();
 }
 
 // 🔹 Boeken tonen in tabel
-function toonBoeken(boeken) {
+function toonBoeken() {
   boekenTabel.innerHTML = "";
   const geselecteerdeKlas = klasFilter.value;
 
-  boeken
+  alleBoeken
     .filter((b) => geselecteerdeKlas === "alle" || b.klas === geselecteerdeKlas)
     .forEach((b) => {
       boekenTabel.innerHTML += `
@@ -57,13 +65,30 @@ function toonBoeken(boeken) {
           <td>${b.auteur || ""}</td>
           <td>${b.klas || ""}</td>
           <td>${b.toegevoegdDoor || ""}</td>
+          <td>
+            <button class="btn btn-sm btn-danger" onclick="verwijderBoek('${b.id}')">Verwijder</button>
+          </td>
         </tr>
       `;
     });
 }
 
+// 🔹 Boek verwijderen
+window.verwijderBoek = async function(id) {
+  if (confirm("Weet je zeker dat je dit boek wil verwijderen?")) {
+    try {
+      await deleteDoc(doc(db, "boeken", id));
+      alert("Boek verwijderd ✅");
+      laadBoeken(); // tabel opnieuw laden
+    } catch (e) {
+      console.error("Fout bij verwijderen:", e);
+      alert("❌ Verwijderen mislukt");
+    }
+  }
+};
+
 // 🔹 Event listener voor filter
-klasFilter.addEventListener("change", () => laadBoeken());
+klasFilter.addEventListener("change", toonBoeken);
 
 // 🔹 Init
 laadBoeken();
