@@ -8,7 +8,15 @@ import {
   doc 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔹 Firebase configuratie
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// 🔹 Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD6MVGAjfWWzw5LfiykYAA0Dyc9AgFPt5U",
   authDomain: "inventaris-kleuterboeken-bsow.firebaseapp.com",
@@ -18,16 +26,45 @@ const firebaseConfig = {
   appId: "1:892488979059:web:27de8ca6923aa0cc315006"
 };
 
-// 🔹 Firebase initialiseren
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 const boekenTabel = document.getElementById("boekenTabel");
 const klasFilter = document.getElementById("klasFilter");
 
-let alleBoeken = []; // hier houden we alle boeken bij met hun id
+let alleBoeken = [];
 
-// 🔹 Boeken ophalen uit Firestore
+// 🔹 Login/out knoppen
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error("Login fout:", error);
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+// 🔹 State change → check user
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email.endsWith("@bsow.be")) {
+    document.getElementById("loginBtn").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "inline-block";
+
+    laadBoeken(); // pas na login boeken ophalen
+  } else {
+    boekenTabel.innerHTML = "";
+    alert("❌ Je moet inloggen met een @bsow.be account om deze pagina te gebruiken.");
+    document.getElementById("loginBtn").style.display = "inline-block";
+    document.getElementById("logoutBtn").style.display = "none";
+  }
+});
+
+// 🔹 Boeken laden
 async function laadBoeken() {
   boekenTabel.innerHTML = "";
   const querySnapshot = await getDocs(collection(db, "boeken"));
@@ -37,11 +74,10 @@ async function laadBoeken() {
 
   querySnapshot.forEach((docSnap) => {
     const data = docSnap.data();
-    alleBoeken.push({ id: docSnap.id, ...data }); // id meenemen voor wissen
+    alleBoeken.push({ id: docSnap.id, ...data });
     if (data.klas) klassenSet.add(data.klas);
   });
 
-  // Klasfilter automatisch opbouwen
   klasFilter.innerHTML = '<option value="alle">Alle klassen</option>';
   klassenSet.forEach((klas) => {
     klasFilter.innerHTML += `<option value="${klas}">${klas}</option>`;
@@ -50,7 +86,6 @@ async function laadBoeken() {
   toonBoeken();
 }
 
-// 🔹 Boeken tonen in tabel
 function toonBoeken() {
   boekenTabel.innerHTML = "";
   const geselecteerdeKlas = klasFilter.value;
@@ -73,13 +108,13 @@ function toonBoeken() {
     });
 }
 
-// 🔹 Boek verwijderen
+// 🔹 Verwijderen
 window.verwijderBoek = async function(id) {
   if (confirm("Weet je zeker dat je dit boek wil verwijderen?")) {
     try {
       await deleteDoc(doc(db, "boeken", id));
       alert("Boek verwijderd ✅");
-      laadBoeken(); // tabel opnieuw laden
+      laadBoeken();
     } catch (e) {
       console.error("Fout bij verwijderen:", e);
       alert("❌ Verwijderen mislukt");
@@ -87,8 +122,5 @@ window.verwijderBoek = async function(id) {
   }
 };
 
-// 🔹 Event listener voor filter
+// 🔹 Filter
 klasFilter.addEventListener("change", toonBoeken);
-
-// 🔹 Init
-laadBoeken();
