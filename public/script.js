@@ -72,3 +72,40 @@ document.addEventListener("keydown", (e) => {
     voegBoekToe("9789024551234", "Voorbeeldboek", "Jan Jansen");
   }
 });
+
+// 🔹 Boek toevoegen via formulier
+const boekForm = document.getElementById("boekForm");
+const melding = document.getElementById("melding");
+
+if (boekForm) {
+  boekForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!auth.currentUser) {
+      alert("Je moet eerst inloggen!");
+      return;
+    }
+
+    const isbn = document.getElementById("isbn").value;
+    const titel = document.getElementById("titel").value;
+    const auteur = document.getElementById("auteur").value;
+    const klas = document.getElementById("klas").value;
+
+    try {
+      await addDoc(collection(db, "boeken"), {
+        isbn: isbn,
+        titel: titel,
+        auteur: auteur,
+        klas: klas,
+        toegevoegdDoor: auth.currentUser.displayName,
+        tijd: new Date()
+      });
+
+      melding.textContent = `✅ Boek "${titel}" opgeslagen!`;
+      boekForm.reset();
+    } catch (e) {
+      console.error("Fout bij opslaan:", e);
+      melding.textContent = "❌ Er ging iets mis bij opslaan.";
+    }
+  });
+}
