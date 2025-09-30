@@ -1,19 +1,9 @@
-// Firebase imports (modulaire aanpak)
+// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔹 Jouw Firebase configuratie
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD6MVGAjfWWzw5LfiykYAA0Dyc9AgFPt5U",
   authDomain: "inventaris-kleuterboeken-bsow.firebaseapp.com",
@@ -23,111 +13,95 @@ const firebaseConfig = {
   appId: "1:892488979059:web:27de8ca6923aa0cc315006"
 };
 
-// 🔹 Firebase initialiseren
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 
-// 🔹 Login/Logout knop
+// Login-knop
 const loginBtn = document.getElementById("loginBtn");
 const boekgegevensDiv = document.getElementById("boekgegevens");
 
-if (loginBtn) {
-  loginBtn.addEventListener("click", async () => {
-    if (auth.currentUser) {
-      // Als gebruiker ingelogd is → log uit
-      await signOut(auth);
-    } else {
-      // Anders → log in met Google
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (error) {
-        console.error("Login mislukt:", error);
-        alert("Er ging iets mis bij het inloggen.");
-      }
-    }
-  });
-}
-
-// 🔹 Controleer login status
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loginBtn.textContent = `Uitloggen (${user.displayName})`;
-    if (boekgegevensDiv) {
-      boekgegevensDiv.textContent = `Welkom ${user.displayName}, je kunt nu boeken toevoegen.`;
-    }
+loginBtn.addEventListener("click", async () => {
+  if (auth.currentUser) {
+    await signOut(auth);
   } else {
-    loginBtn.textContent = "Inloggen met Google";
-    if (boekgegevensDiv) {
-      boekgegevensDiv.textContent = "Nog geen boek gescand.";
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      alert("Login mislukt");
     }
   }
 });
 
-// 🔹 Boek toevoegen via formulier
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email.endsWith("@bsow.be")) {
+    loginBtn.textContent = `Uitloggen (${user.displayName})`;
+    boekgegevensDiv.textContent = `Welkom ${user.displayName}, je kunt nu boeken toevoegen.`;
+  } else {
+    loginBtn.textContent = "Inloggen met Google";
+    boekgegevensDiv.textContent = "Nog geen boek gescand.";
+  }
+});
+
+// Formulier opslaan
 const boekForm = document.getElementById("boekForm");
 const melding = document.getElementById("melding");
 
-if (boekForm) {
-  boekForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+boekForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!auth.currentUser || !auth.currentUser.email.endsWith("@bsow.be")) {
+    alert("Je hebt geen rechten om boeken toe te voegen");
+    return;
+  }
 
-    if (!auth.currentUser) {
-      alert("Je moet eerst inloggen!");
-      return;
-    }
+  const isbn = document.getElementById("isbn").value.trim();
+  const titel = document.getElementById("titel").value.trim();
+  const auteur = document.getElementById("auteur").value.trim();
+  const klas = document.getElementById("klas").value.trim() || null;
+  const categorie = document.getElementById("categorie").value.trim() || null;
+  const doelgroep = document.getElementById("doelgroep").value.trim() || null;
+  const cover = document.getElementById("cover").value.trim() || null;
 
-    const isbn = document.getElementById("isbn").value;
-    const titel = document.getElementById("titel").value;
-    const auteur = document.getElementById("auteur").value;
-    const klas = document.getElementById("klas").value || null;
+  try {
+    await addDoc(collection(db, "boeken"), {
+      isbn, titel, auteur, klas, categorie, doelgroep, cover,
+      toegevoegdDoor: auth.currentUser.displayName,
+      tijd: new Date()
+    });
+    melding.textContent = `✅ Boek "${titel}" opgeslagen!`;
+    boekForm.reset();
+    document.getElementById("coverPreview").style.display = "none";
+  } catch (err) {
+    console.error(err);
+    melding.textContent = "❌ Opslaan mislukt.";
+  }
+});
 
-    try {
-      await addDoc(collection(db, "boeken"), {
-        isbn: isbn,
-        titel: titel,
-        auteur: auteur,
-        klas: klas,
-        toegevoegdDoor: auth.currentUser.displayName,
-        tijd: new Date()
-      });
-
-      melding.textContent = `✅ Boek "${titel}" opgeslagen!`;
-      boekForm.reset();
-    } catch (e) {
-      console.error("Fout bij opslaan:", e);
-      melding.textContent = "❌ Er ging iets mis bij opslaan.";
-    }
-  });
-}
-
-// 🔹 Automatisch titel en auteur ophalen via Google Books API
+// ISBN → auto aanvullen
 const isbnInput = document.getElementById("isbn");
-const titelInput = document.getElementById("titel");
-const auteurInput = document.getElementById("auteur");
+isbnInput.addEventListener("blur", async () => {
+  const isbn = isbnInput.value.trim();
+  if (!isbn) return;
 
-if (isbnInput) {
-  isbnInput.addEventListener("blur", async () => {
-    const isbn = isbnInput.value.trim();
-    if (!isbn) return;
+  try {
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+    const data = await res.json();
 
-    try {
-      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-      const data = await response.json();
-
-      if (data.totalItems > 0) {
-        const boek = data.items[0].volumeInfo;
-        titelInput.value = boek.title || "";
-        auteurInput.value = (boek.authors && boek.authors.join(", ")) || "";
-      } else {
-        titelInput.value = "";
-        auteurInput.value = "";
-        alert("Geen boek gevonden voor dit ISBN.");
+    if (data.totalItems > 0) {
+      const boek = data.items[0].volumeInfo;
+      document.getElementById("titel").value = boek.title || "";
+      document.getElementById("auteur").value = boek.authors ? boek.authors.join(", ") : "";
+      document.getElementById("categorie").value = boek.categories ? boek.categories.join(", ") : "";
+      document.getElementById("doelgroep").value = boek.maturityRating === "NOT_MATURE" ? "Kinderen / Jeugd" : "Volwassenen";
+      if (boek.imageLinks && boek.imageLinks.thumbnail) {
+        document.getElementById("cover").value = boek.imageLinks.thumbnail;
+        const img = document.getElementById("coverPreview");
+        img.src = boek.imageLinks.thumbnail;
+        img.style.display = "block";
       }
-    } catch (error) {
-      console.error("Fout bij ophalen boekgegevens:", error);
     }
-  });
-}
-
+  } catch (err) {
+    console.error("ISBN lookup fout:", err);
+  }
+});
