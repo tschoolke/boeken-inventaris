@@ -70,29 +70,48 @@ onAuthStateChanged(auth, (user) => {
 // ============================
 async function fetchBookInfo(isbn) {
   try {
-    // OpenLibrary API
-    const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&jscmd=details&format=json`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const details = data[`ISBN:${isbn}`]?.details;
+    // Eerst OpenLibrary
+    const urlOL = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&jscmd=details&format=json`;
+    const resOL = await fetch(urlOL);
+    const dataOL = await resOL.json();
+    const details = dataOL[`ISBN:${isbn}`]?.details;
 
-    if (!details) {
-      boekInfoDiv.innerHTML = `<p>Geen gegevens gevonden voor ISBN ${isbn}</p>`;
-      huidigBoek = null;
-      saveBtn.style.display = "none";
-      return;
+    if (details) {
+      huidigBoek = {
+        isbn,
+        titel: details.title || "Onbekende titel",
+        auteur: details.authors ? details.authors.map(a => a.name).join(", ") : "Onbekend",
+        categorie: details.subjects ? details.subjects.join(", ") : "Onbekend",
+        doelgroep: details.audience || "Onbekend",
+        cover: details.covers ? `https://covers.openlibrary.org/b/id/${details.covers[0]}-M.jpg` : null,
+        toegevoegdDoor: auth.currentUser?.displayName || "Onbekend",
+        klas: ""
+      };
+    } else {
+      // Fallback naar Google Books
+      const urlGB = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
+      const resGB = await fetch(urlGB);
+      const dataGB = await resGB.json();
+      const info = dataGB.items?.[0]?.volumeInfo;
+
+      if (!info) {
+        boekInfoDiv.innerHTML = `<p>Geen gegevens gevonden voor ISBN ${isbn}</p>`;
+        huidigBoek = null;
+        saveBtn.style.display = "none";
+        return;
+      }
+
+      huidigBoek = {
+        isbn,
+        titel: info.title || "Onbekende titel",
+        auteur: info.authors ? info.authors.join(", ") : "Onbekend",
+        categorie: info.categories ? info.categories.join(", ") : "Onbekend",
+        doelgroep: info.readingModes ? (info.readingModes.text ? "Leestekst" : "Onbekend") : "Onbekend",
+        cover: info.imageLinks?.thumbnail || null,
+        toegevoegdDoor: auth.currentUser?.displayName || "Onbekend",
+        klas: ""
+      };
     }
-
-    huidigBoek = {
-      isbn: isbn,
-      titel: details.title || "Onbekende titel",
-      auteur: details.authors ? details.authors.map(a => a.name).join(", ") : "Onbekend",
-      categorie: details.subjects ? details.subjects.join(", ") : "Onbekend",
-      doelgroep: details.audience || "Onbekend",
-      cover: details.covers ? `https://covers.openlibrary.org/b/id/${details.covers[0]}-M.jpg` : null,
-      toegevoegdDoor: auth.currentUser?.displayName || "Onbekend",
-      klas: ""
-    };
 
     // Toon in UI
     boekInfoDiv.innerHTML = `
@@ -103,8 +122,8 @@ async function fetchBookInfo(isbn) {
       <p><b>Doelgroep:</b> ${huidigBoek.doelgroep}</p>
       ${huidigBoek.cover ? `<img src="${huidigBoek.cover}" alt="cover" style="max-height:200px;">` : ""}
     `;
-
     saveBtn.style.display = "block";
+
   } catch (err) {
     console.error(err);
     boekInfoDiv.innerHTML = `<p>Fout bij ophalen boekgegevens</p>`;
@@ -142,3 +161,4 @@ saveBtn.addEventListener("click", async () => {
 window.scanISBN = (isbn) => {
   fetchBookInfo(isbn);
 };
+
