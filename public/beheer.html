@@ -3,21 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beheer Boeken</title>
+  <title>Inventaris Kleuterboeken - Beheer</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 </head>
 <body class="container py-4">
 
-<nav class="mb-3">
-  <a href="index.html" class="btn btn-outline-primary btn-sm">📚 Boeken toevoegen</a>
-  <a href="beheer.html" class="btn btn-outline-secondary btn-sm">📖 Beheer</a>
-</nav>
-
-  
   <h1>📖 Beheer Boeken</h1>
 
-  <!-- Filter op klas -->
+  <!-- Navigatie -->
+  <nav class="mb-3">
+    <a href="index.html" class="btn btn-outline-primary btn-sm">📚 Boeken toevoegen</a>
+    <a href="beheer.html" class="btn btn-outline-secondary btn-sm">📖 Beheer</a>
+  </nav>
+
+  <!-- Login/Logout -->
+  <div id="loginDiv">
+    <button id="loginBtn" class="btn btn-success">Inloggen met Google</button>
+    <button id="logoutBtn" class="btn btn-secondary" style="display:none;">Uitloggen</button>
+  </div>
+  <hr>
+
+  <!-- Filters -->
   <div class="mb-3">
     <label for="klasFilter" class="form-label">Filter op klas:</label>
     <select id="klasFilter" class="form-select">
@@ -25,19 +32,13 @@
     </select>
   </div>
 
-<div id="loginDiv">
-  <button id="loginBtn" class="btn btn-success">Inloggen met Google</button>
-  <button id="logoutBtn" class="btn btn-secondary" style="display:none;">Uitloggen</button>
-</div>
-<hr>
+  <!-- Export -->
+  <div class="mb-3">
+    <button id="exportPdfBtn" class="btn btn-outline-danger btn-sm">📄 PDF</button>
+    <button id="exportCsvBtn" class="btn btn-outline-primary btn-sm">📊 CSV</button>
+  </div>
 
-<div class="mb-3">
-  <button id="exportPdfBtn" class="btn btn-outline-danger btn-sm">📄 Exporteer naar PDF</button>
-  <button id="exportCsvBtn" class="btn btn-outline-primary btn-sm">📊 Exporteer naar CSV</button>
-</div>
-
-  
-  <!-- Tabel met boeken -->
+  <!-- Tabel -->
   <table class="table table-striped">
     <thead>
       <tr>
@@ -45,7 +46,11 @@
         <th>Titel</th>
         <th>Auteur</th>
         <th>Klas</th>
+        <th>Categorie</th>
+        <th>Doelgroep</th>
+        <th>Cover</th>
         <th>Toegevoegd door</th>
+        <th>Acties</th>
       </tr>
     </thead>
     <tbody id="boekenTabel"></tbody>
@@ -54,6 +59,3 @@
   <script type="module" src="beheer.js"></script>
 </body>
 </html>
-
-
-
