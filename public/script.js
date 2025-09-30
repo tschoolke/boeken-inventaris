@@ -66,44 +66,57 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ============================
-// Boekgegevens ophalen
+// Boekgegevens ophalen (Google Books + OpenLibrary)
 // ============================
 async function fetchBookInfo(isbn) {
   try {
-    // Eerst Google Books
-    const urlGB = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
-    const resGB = await fetch(urlGB);
-    const dataGB = await resGB.json();
-    let info = dataGB.items?.[0]?.volumeInfo;
+    let boekGB = null;
+    let boekOL = null;
 
-    if (!info) {
-      // Fallback naar OpenLibrary
+    // 1. Google Books
+    try {
+      const urlGB = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
+      const resGB = await fetch(urlGB);
+      const dataGB = await resGB.json();
+      boekGB = dataGB.items?.[0]?.volumeInfo || null;
+    } catch (e) {
+      console.warn("Google Books fout:", e);
+    }
+
+    // 2. OpenLibrary
+    try {
       const urlOL = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&jscmd=details&format=json`;
       const resOL = await fetch(urlOL);
       const dataOL = await resOL.json();
-      info = dataOL[`ISBN:${isbn}`]?.details;
+      boekOL = dataOL[`ISBN:${isbn}`]?.details || null;
+    } catch (e) {
+      console.warn("OpenLibrary fout:", e);
     }
 
-    if (!info) {
+    // 3. Als helemaal niets gevonden
+    if (!boekGB && !boekOL) {
       toonEigenInputFormulier(isbn);
       return;
     }
 
+    // 4. Gegevens combineren
     huidigBoek = {
       isbn,
-      titel: info.title || "Onbekende titel",
-      auteur: info.authors
-        ? Array.isArray(info.authors)
-          ? info.authors.map(a => a.name || a).join(", ")
-          : info.authors
-        : "Onbekend",
-      categorie: info.categories ? info.categories.join(", ") : "Onbekend",
-      doelgroep: info.audience || "Onbekend",
-      cover: info.imageLinks?.thumbnail || (info.covers ? `https://covers.openlibrary.org/b/id/${info.covers[0]}-M.jpg` : null),
+      titel: boekGB?.title || boekOL?.title || "Onbekend",
+      auteur: boekGB?.authors
+        ? boekGB.authors.join(", ")
+        : (boekOL?.authors ? boekOL.authors.map(a => a.name).join(", ") : "Onbekend"),
+      categorie: boekGB?.categories?.join(", ") || (boekOL?.subjects ? boekOL.subjects.join(", ") : "Onbekend"),
+      doelgroep: boekGB?.maturityRating === "NOT_MATURE"
+        ? "Kinderen / Jeugd"
+        : (boekOL?.audience || "Onbekend"),
+      cover: boekGB?.imageLinks?.thumbnail ||
+        (boekOL?.covers ? `https://covers.openlibrary.org/b/id/${boekOL.covers[0]}-M.jpg` : null),
       toegevoegdDoor: auth.currentUser?.displayName || "Onbekend",
       klas: ""
     };
 
+    // 5. Info tonen in UI
     toonBoekInfo(huidigBoek);
 
   } catch (err) {
@@ -112,6 +125,9 @@ async function fetchBookInfo(isbn) {
   }
 }
 
+// ============================
+// Boek tonen in UI
+// ============================
 function toonBoekInfo(boek) {
   boekInfoDiv.innerHTML = `
     <p><b>ISBN:</b> ${boek.isbn}</p>
@@ -124,6 +140,9 @@ function toonBoekInfo(boek) {
   saveBtn.style.display = "block";
 }
 
+// ============================
+// Eigen input formulier tonen
+// ============================
 function toonEigenInputFormulier(isbn) {
   boekInfoDiv.innerHTML = `
     <p>Geen gegevens gevonden voor ISBN ${isbn}. Vul zelf in:</p>
@@ -157,7 +176,7 @@ saveBtn.addEventListener("click", async () => {
     return;
   }
 
-  // Als gebruiker eigen input formulier invult → neem waarden over
+  // Als gebruiker zelf ingevuld heeft
   if (document.getElementById("titelInput")) {
     huidigBoek.titel = document.getElementById("titelInput").value || "Onbekend";
     huidigBoek.auteur = document.getElementById("auteurInput").value || "Onbekend";
@@ -181,7 +200,7 @@ saveBtn.addEventListener("click", async () => {
 });
 
 // ============================
-// Scanner trigger (simulatie)
+// Scanner trigger (ook via Enter in index.html)
 // ============================
 window.scanISBN = (isbn) => {
   fetchBookInfo(isbn);
