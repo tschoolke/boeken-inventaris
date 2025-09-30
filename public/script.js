@@ -81,7 +81,7 @@ if (boekForm) {
     const isbn = document.getElementById("isbn").value;
     const titel = document.getElementById("titel").value;
     const auteur = document.getElementById("auteur").value;
-    const klas = document.getElementById("klas").value;
+    const klas = document.getElementById("klas").value || null;
 
     try {
       await addDoc(collection(db, "boeken"), {
@@ -130,3 +130,4 @@ if (isbnInput) {
     }
   });
 }
+
