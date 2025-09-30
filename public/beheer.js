@@ -1,9 +1,9 @@
-// Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+// Firebase imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
-// Config
+// Firebase config (zelfde als in script.js)
 const firebaseConfig = {
   apiKey: "AIzaSyD6MVGAjfWWzw5LfiykYAA0Dyc9AgFPt5U",
   authDomain: "inventaris-kleuterboeken-bsow.firebaseapp.com",
@@ -25,7 +25,7 @@ const klasFilter = document.getElementById("klasFilter");
 
 let alleBoeken = [];
 
-// Login/out
+// ===== LOGIN =====
 loginBtn.addEventListener("click", async () => { await signInWithPopup(auth, provider); });
 logoutBtn.addEventListener("click", async () => { await signOut(auth); });
 
@@ -38,10 +38,11 @@ onAuthStateChanged(auth, (user) => {
     boekenTabel.innerHTML = "";
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
+    alert("Je moet inloggen met een @bsow.be account.");
   }
 });
 
-// Boeken laden
+// ===== BOEKEN LADEN =====
 async function laadBoeken() {
   const snapshot = await getDocs(collection(db, "boeken"));
   alleBoeken = [];
@@ -90,7 +91,7 @@ window.verwijderBoek = async function(id) {
 
 klasFilter.addEventListener("change", toonBoeken);
 
-// Export CSV
+// ===== EXPORT CSV =====
 document.getElementById("exportCsvBtn").addEventListener("click", () => {
   let csv = "ISBN,Titel,Auteur,Klas,Categorie,Doelgroep,Cover,Toegevoegd door\n";
   alleBoeken.forEach(b => {
@@ -104,7 +105,7 @@ document.getElementById("exportCsvBtn").addEventListener("click", () => {
   link.click();
 });
 
-// Export PDF (print)
+// ===== EXPORT PDF =====
 document.getElementById("exportPdfBtn").addEventListener("click", () => {
   const win = window.open("", "_blank");
   let html = `<html><head><title>Boekenlijst</title><style>
