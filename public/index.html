@@ -22,30 +22,30 @@
     <button id="logoutBtn" class="btn btn-secondary" style="display:none;">Uitloggen</button>
   </div>
 
-  <!-- Scanner simulatie (voor test, later kan echte scanner gekoppeld worden) -->
+  <!-- ISBN invoer -->
   <div class="mb-3">
     <label for="isbnInput" class="form-label">ISBN invoeren of scannen</label>
     <input type="text" id="isbnInput" class="form-control" placeholder="Geef ISBN in en druk op Enter">
   </div>
 
-  <!-- Boekgegevens -->
+  <!-- Boekgegevens of eigen invoer -->
   <div id="boekinfo" class="p-3 border rounded bg-light">
     Nog geen boek gescand.
   </div>
 
-  <!-- Opslaan knop -->
+  <!-- Opslaan -->
   <div class="mt-3">
     <button id="saveBtn" class="btn btn-primary" style="display:none;">Opslaan in Firestore</button>
   </div>
 
   <script type="module" src="script.js"></script>
   <script>
-    // Enter-toets koppelen aan de scannerfunctie
+    // Enter-toets koppelen aan de scanfunctie
     document.getElementById("isbnInput").addEventListener("keyup", function(e) {
       if (e.key === "Enter") {
         const isbn = e.target.value.trim();
         if (isbn) {
-          window.scanISBN(isbn); // functie komt uit script.js
+          window.scanISBN(isbn); // functie uit script.js
           e.target.value = "";
         }
       }
