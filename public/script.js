@@ -1,7 +1,17 @@
-// Firebase imports
+// Firebase imports (modulaire aanpak)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // 🔹 Jouw Firebase configuratie
 const firebaseConfig = {
@@ -19,57 +29,39 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 
-// 🔹 Login knop
+// 🔹 Login/Logout knop
 const loginBtn = document.getElementById("loginBtn");
+const boekgegevensDiv = document.getElementById("boekgegevens");
 
-loginBtn.addEventListener("click", async () => {
-  if (auth.currentUser) {
-    // Als gebruiker al ingelogd is → log uit
-    await signOut(auth);
-  } else {
-    // Anders → log in
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login mislukt:", error);
-      alert("Er ging iets mis bij het inloggen.");
+if (loginBtn) {
+  loginBtn.addEventListener("click", async () => {
+    if (auth.currentUser) {
+      // Als gebruiker ingelogd is → log uit
+      await signOut(auth);
+    } else {
+      // Anders → log in met Google
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error("Login mislukt:", error);
+        alert("Er ging iets mis bij het inloggen.");
+      }
     }
-  }
-});
+  });
+}
 
 // 🔹 Controleer login status
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBtn.textContent = `Uitloggen (${user.displayName})`;
-    document.getElementById("boekgegevens").textContent =
-      `Welkom ${user.displayName}, je kunt nu boeken toevoegen.`;
+    if (boekgegevensDiv) {
+      boekgegevensDiv.textContent = `Welkom ${user.displayName}, je kunt nu boeken toevoegen.`;
+    }
   } else {
     loginBtn.textContent = "Inloggen met Google";
-    document.getElementById("boekgegevens").textContent =
-      "Nog geen boek gescand.";
-  }
-});
-
-// 🔹 Voorbeeldfunctie: boek toevoegen aan Firestore
-async function voegBoekToe(isbn, titel, auteur) {
-  try {
-    await addDoc(collection(db, "boeken"), {
-      isbn: isbn,
-      titel: titel,
-      auteur: auteur,
-      gebruiker: auth.currentUser ? auth.currentUser.uid : null,
-      tijd: new Date()
-    });
-    console.log("Boek toegevoegd:", titel);
-  } catch (e) {
-    console.error("Fout bij opslaan:", e);
-  }
-}
-
-// 🔹 Test (later vervang je dit door scanfunctie)
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && auth.currentUser) {
-    voegBoekToe("9789024551234", "Voorbeeldboek", "Jan Jansen");
+    if (boekgegevensDiv) {
+      boekgegevensDiv.textContent = "Nog geen boek gescand.";
+    }
   }
 });
 
@@ -106,6 +98,35 @@ if (boekForm) {
     } catch (e) {
       console.error("Fout bij opslaan:", e);
       melding.textContent = "❌ Er ging iets mis bij opslaan.";
+    }
+  });
+}
+
+// 🔹 Automatisch titel en auteur ophalen via Google Books API
+const isbnInput = document.getElementById("isbn");
+const titelInput = document.getElementById("titel");
+const auteurInput = document.getElementById("auteur");
+
+if (isbnInput) {
+  isbnInput.addEventListener("blur", async () => {
+    const isbn = isbnInput.value.trim();
+    if (!isbn) return;
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+      const data = await response.json();
+
+      if (data.totalItems > 0) {
+        const boek = data.items[0].volumeInfo;
+        titelInput.value = boek.title || "";
+        auteurInput.value = (boek.authors && boek.authors.join(", ")) || "";
+      } else {
+        titelInput.value = "";
+        auteurInput.value = "";
+        alert("Geen boek gevonden voor dit ISBN.");
+      }
+    } catch (error) {
+      console.error("Fout bij ophalen boekgegevens:", error);
     }
   });
 }
