@@ -22,3 +22,25 @@
   <script type="module" src="script.js"></script>
 </body>
 </html>
+
+<h2 class="mt-4">Nieuw boek toevoegen</h2>
+<form id="boekForm" class="mt-2">
+  <div class="mb-2">
+    <label for="isbn" class="form-label">ISBN</label>
+    <input type="text" id="isbn" class="form-control" required>
+  </div>
+  <div class="mb-2">
+    <label for="titel" class="form-label">Titel</label>
+    <input type="text" id="titel" class="form-control" required>
+  </div>
+  <div class="mb-2">
+    <label for="auteur" class="form-label">Auteur</label>
+    <input type="text" id="auteur" class="form-control" required>
+  </div>
+  <div class="mb-2">
+    <label for="klas" class="form-label">Klas</label>
+    <input type="text" id="klas" class="form-control" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Opslaan</button>
+</form>
+<div id="melding" class="mt-2 text-success"></div>
