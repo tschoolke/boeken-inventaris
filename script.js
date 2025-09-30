@@ -40,6 +40,35 @@ auth.onAuthStateChanged(user => {
     saveBtn.style.display = "none";
   }
 });
+// 🔹 Automatisch titel en auteur ophalen via Google Books API
+const isbnInput = document.getElementById("isbn");
+const titelInput = document.getElementById("titel");
+const auteurInput = document.getElementById("auteur");
+
+if (isbnInput) {
+  isbnInput.addEventListener("blur", async () => {
+    const isbn = isbnInput.value.trim();
+    if (!isbn) return;
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+      const data = await response.json();
+
+      if (data.totalItems > 0) {
+        const boek = data.items[0].volumeInfo;
+        titelInput.value = boek.title || "";
+        auteurInput.value = (boek.authors && boek.authors.join(", ")) || "";
+      } else {
+        titelInput.value = "";
+        auteurInput.value = "";
+        alert("Geen boek gevonden voor dit ISBN.");
+      }
+    } catch (error) {
+      console.error("Fout bij ophalen boekgegevens:", error);
+    }
+  });
+}
+
 
 // 🎥 Start scanner
 document.getElementById("scanBtn").addEventListener("click", () => {
@@ -114,3 +143,4 @@ document.getElementById("saveBtn").addEventListener("click", () => {
     document.getElementById("boekinfo").innerText = "Nog geen boek gescand.";
   });
 });
+
