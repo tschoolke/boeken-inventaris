@@ -51,3 +51,7 @@ button:hover {
   background: #34495e;
   color: white;
 }
+nav a {
+  margin-right: 5px;
+}
+
